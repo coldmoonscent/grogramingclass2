@@ -1,0 +1,191 @@
+class Attractor {
+  constructor(x, y) {
+    this.position = createVector(x, y);
+    //{!1} How strong is the repeller?
+    this.power = 150;
+  }
+  
+  move(value) {
+    this.position.y -= value;
+  }
+  
+  setPower(value) {
+    this.power = map(value, 0, width, -300, 300);
+  }
+
+  show() {
+    stroke(0);
+    strokeWeight(2);
+    fill(200, 130, 50);
+    circle(this.position.x, this.position.y, 32);
+  }
+
+  pull(particle) {
+    //{!6 .code-wide} This is the same repel algorithm we used in Chapter 2: forces based on gravitational attraction.
+    let force = p5.Vector.sub(this.position, particle.position);
+    let distance = force.mag();
+    distance = constrain(distance, 5, 50);
+    let strength = this.power / (distance * distance);
+    force.setMag(strength);
+    return force;
+  }
+}
+//{!1} The Emitter manages all the particles.
+class Emitter {
+
+  constructor(x, y) {
+    this.origin = createVector(x, y);
+    this.particles = [];
+  }
+
+  addParticle() {
+    this.particles.push(new Particle(this.origin.x, this.origin.y));
+  }
+
+  applyForce(force) {
+    //{!3} Applying a force as a p5.Vector
+    for (let particle of this.particles) {
+      particle.applyForce(force);
+    }
+  }
+
+  applyRepeller(repeller) {
+    //{!4} Calculating a force for each Particle based on a Repeller
+    for (let particle of this.particles) {
+      let force = repeller.repel(particle);
+      particle.applyForce(force);
+    }
+  }
+  
+  applyAttractor(attractor) {
+    //{!4} Calculating a force for each Particle based on a Repeller
+    for (let particle of this.particles) {
+      let force = attractor.pull(particle);
+      particle.applyForce(force);
+    }
+  }
+
+  run() {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const particle = this.particles[i];
+      particle.run();
+      if (particle.isDead()) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+}
+// The Nature of Code
+// Daniel Shiffman
+// http://natureofcode.com
+
+// Simple Particle System
+
+// A simple Particle class
+
+class Particle {
+  constructor(x, y) {
+    this.position = createVector(x, y);
+    this.velocity = createVector(random(-1, 1), random(-1, 0));
+    this.acceleration = createVector(0, 0);
+    this.lifespan = 255.0;
+  }
+
+  run() {
+    this.update();
+    this.show();
+  }
+
+  applyForce(f) {
+    this.acceleration.add(f);
+  }
+
+  // Method to update position
+  update() {
+    this.velocity.add(this.acceleration);
+    this.position.add(this.velocity);
+    this.lifespan -= 2;
+    this.acceleration.mult(0);
+  }
+
+  // Method to display
+  show() {
+    stroke(0, this.lifespan);
+    strokeWeight(2);
+    fill(127, this.lifespan);
+    circle(this.position.x, this.position.y, 1);
+  }
+
+  // Is the particle still useful?
+  isDead() {
+    return this.lifespan < 0.0;
+  }
+}
+class Repeller {
+  constructor(x, y) {
+    this.position = createVector(x, y);
+    //{!1} How strong is the repeller?
+    this.power = 150;
+  }
+  
+  move(value) {
+    this.position.y -= value;
+  }
+  
+  setPower(value) {
+    this.power = map(value, 0, width, -300, 300);
+  }
+
+  show() {
+    stroke(0);
+    strokeWeight(2);
+    fill(127);
+    circle(this.position.x, this.position.y, 32);
+  }
+
+  repel(particle) {
+    //{!6 .code-wide} This is the same repel algorithm we used in Chapter 2: forces based on gravitational attraction.
+    let force = p5.Vector.sub(this.position, particle.position);
+    let distance = force.mag();
+    distance = constrain(distance, 5, 50);
+    let strength = (-1 * this.power) / (distance * distance);
+    force.setMag(strength);
+    return force;
+  }
+}
+// One ParticleSystem
+let emitter;
+
+//{!1} One repeller
+let repeller;
+let att;
+
+function setup() {
+  createCanvas(400, 400);
+  emitter = new Emitter(width / 2, height/2);
+  repeller = new Repeller(width / 2, 350);
+  att = new Attractor(20, height/2);
+}
+
+function draw() {
+  background(255);
+    
+  repeller.setPower(mouseX);
+  repeller.move(0.5);
+  
+  emitter.addParticle();
+  emitter.addParticle();
+  emitter.addParticle();
+  
+  // We’re applying a universal gravity.
+  let gravity = createVector(0, 0.1);
+  emitter.applyForce(gravity);
+  //{!1} Applying the repeller
+  emitter.applyRepeller(repeller);
+  emitter.applyAttractor(att);
+  emitter.run();
+
+  repeller.show();
+  att.show();
+}
+
