@@ -1,32 +1,76 @@
+// One ParticleSystem
+let emitter;
+
+// One repeller
+let repeller;
+let att;
+
+let sliderRepeller;
+let colorPicker;
+
+function setup() {
+  createCanvas(400, 400);
+  emitter = new Emitter(width / 2, height / 2);
+  repeller = new Repeller(width / 2, 350);
+  att = new Attractor(20, height / 2);
+
+  // 리펠러 힘을 조절하는 슬라이더 생성
+  sliderRepeller = createSlider(0, 500, 150);
+  sliderRepeller.position(100, height + 10);
+
+  // 구의 색상을 조절하는 컬러 피커 생성
+  colorPicker = createColorPicker(color(200, 130, 50));
+  colorPicker.position(10, height + 40);
+}
+
+function draw() {
+  background(255);
+
+  // 슬라이더의 값으로 리펠러 힘 업데이트
+  repeller.setPower(sliderRepeller.value());
+  repeller.move(0.5);
+
+  // 구의 색상을 컬러 피커의 값으로 업데이트
+  att.setColor(colorPicker.color());
+
+  emitter.addParticle();
+  emitter.addParticle();
+  emitter.addParticle();
+
+  let gravity = createVector(0, 0.1);
+  emitter.applyForce(gravity);
+  emitter.applyRepeller(repeller);
+  emitter.applyAttractor(att);
+  emitter.run();
+
+  repeller.show();
+  att.show();
+
+  // 선택한 색상으로 파티클의 색상 설정
+  let particleColor = colorPicker.color();
+  fill(particleColor);
+  noStroke();
+  ellipse(50, height + 30, 20, 20); // 예시로 색상 표시 원 그리기
+}
 class Attractor {
   constructor(x, y) {
     this.position = createVector(x, y);
-    //{!1} How strong is the repeller?
     this.power = 150;
     this.color = color(200, 130, 50);
   }
-  
-  setColor(c){
-    this.color = c;
 
-  }
-  move(value) {
-    this.position.y -= value;
-  }
-  
-  setPower(value) {
-    this.power = map(value, 0, width, -300, 300);
+  setColor(c) {
+    this.color = c;
   }
 
   show() {
     stroke(0);
     strokeWeight(2);
-    fill(200, 130, 50);
+    fill(this.color);
     circle(this.position.x, this.position.y, 32);
   }
 
   pull(particle) {
-    //{!6 .code-wide} This is the same repel algorithm we used in Chapter 2: forces based on gravitational attraction.
     let force = p5.Vector.sub(this.position, particle.position);
     let distance = force.mag();
     distance = constrain(distance, 5, 50);
@@ -35,9 +79,8 @@ class Attractor {
     return force;
   }
 }
-//{!1} The Emitter manages all the particles.
-class Emitter {
 
+class Emitter {
   constructor(x, y) {
     this.origin = createVector(x, y);
     this.particles = [];
@@ -48,22 +91,19 @@ class Emitter {
   }
 
   applyForce(force) {
-    //{!3} Applying a force as a p5.Vector
     for (let particle of this.particles) {
       particle.applyForce(force);
     }
   }
 
   applyRepeller(repeller) {
-    //{!4} Calculating a force for each Particle based on a Repeller
     for (let particle of this.particles) {
       let force = repeller.repel(particle);
       particle.applyForce(force);
     }
   }
-  
+
   applyAttractor(attractor) {
-    //{!4} Calculating a force for each Particle based on a Repeller
     for (let particle of this.particles) {
       let force = attractor.pull(particle);
       particle.applyForce(force);
@@ -80,21 +120,13 @@ class Emitter {
     }
   }
 }
-// The Nature of Code
-// Daniel Shiffman
-// http://natureofcode.com
-
-// Simple Particle System
-
-// A simple Particle class
-
 class Particle {
   constructor(x, y) {
     this.position = createVector(x, y);
     this.velocity = createVector(random(-1, 1), random(-1, 0));
     this.acceleration = createVector(0, 0);
     this.lifespan = 255.0;
-    this.color = color(127, this.lifespan);
+    this.colorPicker = colorPicker; // colorPicker를 파티클 내에서 참조할 수 있도록 추가
   }
 
   run() {
@@ -106,24 +138,24 @@ class Particle {
     this.acceleration.add(f);
   }
 
-  // Method to update position
   update() {
     this.velocity.add(this.acceleration);
     this.position.add(this.velocity);
     this.lifespan -= 2;
     this.acceleration.mult(0);
-    this.color.levels[3] = this.lifespan;
-}
 
-  // Method to display
+    // colorPicker의 값으로 파티클의 색상 업데이트
+    let particleColor = this.colorPicker.color();
+    this.color = color(particleColor.levels[0], particleColor.levels[1], particleColor.levels[2], this.lifespan);
+  }
+
   show() {
     stroke(0, this.lifespan);
     strokeWeight(2);
-    fill(127, this.lifespan);
-    circle(this.position.x, this.position.y, 30);
+    fill(this.color);
+    circle(this.position.x, this.position.y, 5);
   }
 
-  // Is the particle still useful?
   isDead() {
     return this.lifespan < 0.0;
   }
@@ -131,14 +163,13 @@ class Particle {
 class Repeller {
   constructor(x, y) {
     this.position = createVector(x, y);
-    //{!1} How strong is the repeller?
     this.power = 150;
   }
-  
+
   move(value) {
     this.position.y -= value;
   }
-  
+
   setPower(value) {
     this.power = map(value, 0, width, -300, 300);
   }
@@ -151,7 +182,6 @@ class Repeller {
   }
 
   repel(particle) {
-    //{!6 .code-wide} This is the same repel algorithm we used in Chapter 2: forces based on gravitational attraction.
     let force = p5.Vector.sub(this.position, particle.position);
     let distance = force.mag();
     distance = constrain(distance, 5, 50);
@@ -160,50 +190,3 @@ class Repeller {
     return force;
   }
 }
-// One ParticleSystem
-let emitter;
-
-//{!1} One repeller
-let repeller;
-let att;
-
-let sliderRepeller;
-let colorPicker;
-
-function setup() {
-  createCanvas(400, 400);
-  emitter = new Emitter(width / 2, height/2);
-  repeller = new Repeller(width / 2, 350);
-  att = new Attractor(20, height/2);
-
-  sliderRepeller = createSlider(0, 500, 150);
-  sliderRepeller.position(100, height + 40);
-
-  colorPicker = createColorPicker(color(200, 130, 50));
-  colorPicker.position(10, height + 40);
-  
-}
-
-function draw() {
-  background(255);
-    repeller.setPower(sliderRepeller. value());
-    repeller.move(0.5);
-    
-    att.setColor(colorPicker.color());
-    
-  emitter.addParticle();
-  emitter.addParticle();
-  emitter.addParticle();
-  
-  // We’re applying a universal gravity.
-  let gravity = createVector(0, 0.1);
-  emitter.applyForce(gravity);
-  //{!1} Applying the repeller
-  emitter.applyRepeller(repeller);
-  emitter.applyAttractor(att);
-  emitter.run();
-
-  repeller.show();
-  att.show();
-}
-
