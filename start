@@ -3,8 +3,13 @@ class Attractor {
     this.position = createVector(x, y);
     //{!1} How strong is the repeller?
     this.power = 150;
+    this.color = color(200, 130, 50);
   }
   
+  setColor(c){
+    this.color = c;
+
+  }
   move(value) {
     this.position.y -= value;
   }
@@ -89,6 +94,7 @@ class Particle {
     this.velocity = createVector(random(-1, 1), random(-1, 0));
     this.acceleration = createVector(0, 0);
     this.lifespan = 255.0;
+    this.color = color(127, this.lifespan);
   }
 
   run() {
@@ -106,7 +112,8 @@ class Particle {
     this.position.add(this.velocity);
     this.lifespan -= 2;
     this.acceleration.mult(0);
-  }
+    this.acceleration.color.levels[3] = this.lifespan;
+}
 
   // Method to display
   show() {
@@ -160,19 +167,30 @@ let emitter;
 let repeller;
 let att;
 
+let sliderRepeller;
+let colorPicker;
+
 function setup() {
   createCanvas(400, 400);
   emitter = new Emitter(width / 2, height/2);
   repeller = new Repeller(width / 2, 350);
   att = new Attractor(20, height/2);
+
+  sliderRepeller = createSlider(0, 500, 150);
+  sliderRepeller.position(100, height + 40);
+
+  colorPicker = createColorPicker(color(200, 130, 50));
+  colorPicker.position(10, height + 40);
+  
 }
 
 function draw() {
   background(255);
+    repeller.setPower(sliderRepeller. value());
+    repeller.move(0.5);
     
-  repeller.setPower(mouseX);
-  repeller.move(0.5);
-  
+    att.setColor(colorPicker.color());
+    
   emitter.addParticle();
   emitter.addParticle();
   emitter.addParticle();
