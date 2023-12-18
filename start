@@ -1,14 +1,20 @@
 let attractor;
 let particles = [];
+let strengthSlider;
 
 function setup() {
   createCanvas(400, 400);
+  
   attractor = new Attractor(width / 2, height / 2);
+  strengthSlider = createSlider(0, 1, 0.4, 0.01);
+  strengthSlider.position(width + 20, height / 2 - strengthSlider.height / 2);
 }
 
 function draw() {
   background(220);
 
+  attractor.setStrength(strengthSlider.value());
+  
   attractor.calculateAttraction();
 
   attractor.display();
@@ -30,7 +36,12 @@ class Attractor {
   constructor(x, y) {
     this.position = createVector(x, y);
     this.mass = 20;
-    this.G = 0.4; 
+    this.G = 0.4;
+    this.strength = 0.4;
+  }
+
+  setStrength(s) {
+    this.strength = s;
   }
 
   calculateAttractionForce(particle) {
@@ -40,7 +51,7 @@ class Attractor {
     force.normalize();
 
     let strength = (this.G * this.mass * particle.mass) / (distance * distance);
-    force.mult(strength);
+    force.mult(strength * this.strength);
 
     return force;
   }
