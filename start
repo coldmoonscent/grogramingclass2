@@ -1,213 +1,84 @@
-let emitter;
-
-let repeller;
-let att;
-
-let sliderRepeller;
-let sliderParticleSize;
-let colorPicker;
+let attractor;
+let particles = [];
 
 function setup() {
   createCanvas(400, 400);
-  emitter = new Emitter(width / 2, height / 2);
-  repeller = new Repeller(width / 2, 350);
-  att = new Attractor(20, height / 2);
-
-  sliderRepeller = createSlider(0, 500, 150);
-  sliderRepeller.position(100, height + 10);
-
-  sliderParticleSize = createSlider(1, 20, 5);
-  sliderParticleSize.position(100, height + 30);
-
-  colorPicker = createColorPicker(color(200, 130, 50));
-  colorPicker.position(10, height + 60);
+  attractor = new Attractor(width / 2, height / 2);
 }
 
 function draw() {
-  background(255);
+  background(220);
 
-  repeller.setPower(sliderRepeller.value());
-  repeller.move(0.5);
+  attractor.calculateAttraction();
 
-  emitter.setParticleSize(sliderParticleSize.value());
+  attractor.display();
 
-  att.setColor(colorPicker.color());
+  for (let i = 0; i < particles.length; i++) {
+    let force = attractor.calculateAttractionForce(particles[i]);
+    particles[i].applyForce(force);
+    particles[i].update();
+    particles[i].display();
+  }
+}
 
-  emitter.addParticle();
-  emitter.addParticle();
-  emitter.addParticle();
-
-  let gravity = createVector(0, 0.1);
-  emitter.applyForce(gravity);
-  emitter.applyRepeller(repeller);
-  emitter.applyAttractor(att);
-  emitter.run();
-
-  repeller.show();
-  att.show();
-
-  let particleColor = colorPicker.color();
-  fill(particleColor);
-  noStroke();
-  ellipse(50, height + 45, 20, 20);
+function mouseMoved() {
+  let particle = new Particle(mouseX, mouseY);
+  particles.push(particle);
 }
 
 class Attractor {
   constructor(x, y) {
     this.position = createVector(x, y);
-    this.power = 150;
-    this.color = color(200, 130, 50);
+    this.mass = 20;
+    this.G = 0.4; 
   }
 
-  setColor(c) {
-    this.color = c;
-  }
-
-  show() {
-    stroke(0);
-    strokeWeight(2);
-    fill(this.color);
-    circle(this.position.x, this.position.y, 32);
-  }
-
-  pull(particle) {
+  calculateAttractionForce(particle) {
     let force = p5.Vector.sub(this.position, particle.position);
     let distance = force.mag();
-    distance = constrain(distance, 5, 50);
-    let strength = this.power / (distance * distance);
-    force.setMag(strength);
+    distance = constrain(distance, 5, 25);
+    force.normalize();
+
+    let strength = (this.G * this.mass * particle.mass) / (distance * distance);
+    force.mult(strength);
+
     return force;
   }
-}
-class Emitter {
-  constructor(x, y) {
-    this.origin = createVector(x, y);
-    this.particles = [];
-    this.particleSize = 5;
-  }
 
-  addParticle() {
-    const particle = new Particle(
-      this.origin.x,
-      this.origin.y,
-      this.particleSize
-    );
-    particle.setSize(this.particleSize);
-    this.particles.push(particle);
-  }
-
-  applyForce(force) {
-    for (let particle of this.particles) {
-      particle.applyForce(force);
+  calculateAttraction() {
+    for (let i = 0; i < particles.length; i++) {
+      let force = this.calculateAttractionForce(particles[i]);
+      particles[i].applyForce(force);
     }
   }
 
-  applyRepeller(repeller) {
-    for (let particle of this.particles) {
-      let force = repeller.repel(particle);
-      particle.applyForce(force);
-    }
-  }
-
-  applyAttractor(attractor) {
-    for (let particle of this.particles) {
-      let force = attractor.pull(particle);
-      particle.applyForce(force);
-    }
-  }
-
-  run() {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const particle = this.particles[i];
-      particle.run();
-      if (particle.isDead()) {
-        this.particles.splice(i, 1);
-      }
-    }
-  }
-
-  setParticleSize(size) {
-    this.particleSize = size;
+  display() {
+    fill(255, 0, 0);
+    ellipse(this.position.x, this.position.y, this.mass * 2, this.mass * 2);
   }
 }
 
 class Particle {
   constructor(x, y) {
     this.position = createVector(x, y);
-    this.velocity = createVector(random(-1, 1), random(-1, 0));
+    this.velocity = createVector(0, 0);
     this.acceleration = createVector(0, 0);
-    this.lifespan = 255.0;
-    this.colorPicker = colorPicker;
-    this.size = 5;
+    this.mass = 1;
   }
 
-  run() {
-    this.update();
-    this.show();
-  }
-
-  applyForce(f) {
+  applyForce(force) {
+    let f = force.copy().div(this.mass);
     this.acceleration.add(f);
   }
 
   update() {
     this.velocity.add(this.acceleration);
     this.position.add(this.velocity);
-    this.lifespan -= 2;
     this.acceleration.mult(0);
-
-    let particleColor = this.colorPicker.color();
-    this.color = color(
-      particleColor.levels[0],
-      particleColor.levels[1],
-      particleColor.levels[2],
-      this.lifespan
-    );
   }
 
-  show() {
-    stroke(0, this.lifespan);
-    strokeWeight(2);
-    fill(this.color);
-    circle(this.position.x, this.position.y, this.size);
-  }
-
-  setSize(size) {
-    this.size = size;
-  }
-
-  isDead() {
-    return this.lifespan < 0.0;
-  }
-}
-
-class Repeller {
-  constructor(x, y) {
-    this.position = createVector(x, y);
-    this.power = 150;
-  }
-
-  move(value) {
-    this.position.y -= value;
-  }
-
-  setPower(value) {
-    this.power = map(value, 0, width, -300, 300);
-  }
-
-  show() {
-    stroke(0);
-    strokeWeight(2);
-    fill(127);
-    circle(this.position.x, this.position.y, 32);
-  }
-
-  repel(particle) {
-    let force = p5.Vector.sub(this.position, particle.position);
-    let distance = force.mag();
-    distance = constrain(distance, 5, 50);
-    let strength = (-1 * this.power) / (distance * distance);
-    force.setMag(strength);
-    return force;
+  display() {
+    fill(0, 150, 255);
+    ellipse(this.position.x, this.position.y, 10, 10);
   }
 }
